@@ -393,6 +393,9 @@ class Cluster(CloudFormationModel):
         security_configuration: Optional[str] = None,
         kerberos_attributes: Optional[Dict[str, str]] = None,
         auto_scaling_role: Optional[str] = None,
+        ebs_root_volume_size: Optional[int] = None,
+        ebs_root_volume_iops: Optional[int] = None,
+        ebs_root_volume_throughput: Optional[int] = None,
     ):
         self.id = cluster_id or random_cluster_id()
         emr_backend.clusters[self.id] = self
@@ -481,6 +484,10 @@ class Cluster(CloudFormationModel):
         self.requested_ami_version = requested_ami_version
         self.running_ami_version = running_ami_version
         self.custom_ami_id = custom_ami_id
+
+        self.ebs_root_volume_size = ebs_root_volume_size
+        self.ebs_root_volume_iops = ebs_root_volume_iops
+        self.ebs_root_volume_throughput = ebs_root_volume_throughput
 
         self.role = job_flow_role or "EMRJobflowDefault"
         self.service_role = service_role
@@ -582,8 +589,8 @@ class Cluster(CloudFormationModel):
 
         for ec2_instance in self.ec2_instances:
             if ec2_instance.instance_group.id == master_instance_group.id:
-                dashed_ip, domain = ec2_instance.public_dns_name.split('.', 1)
-                return '.'.join([dashed_ip, self.emr_backend.region_name, domain])
+                dashed_ip, domain = ec2_instance.public_dns_name.split(".", 1)
+                return ".".join([dashed_ip, self.emr_backend.region_name, domain])
 
         # TODO: Moto does not create instances when InstanceGroups is not provided to RunJobFlow operation.
         #  In fact it should also do so when InstanceCount/InstanceType are provided.
