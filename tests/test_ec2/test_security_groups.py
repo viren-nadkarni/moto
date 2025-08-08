@@ -20,7 +20,6 @@ REGION = "us-east-1"
 
 @mock_aws
 def test_create_and_describe_security_group():
-    ec2 = boto3.resource("ec2", REGION)
     client = boto3.client("ec2", REGION)
 
     with pytest.raises(ClientError) as ex:
@@ -33,10 +32,15 @@ def test_create_and_describe_security_group():
     )
 
     sec_name = str(uuid4())
-    security_group = ec2.create_security_group(GroupName=sec_name, Description="test")
+    response = client.create_security_group(GroupName=sec_name, Description="test")
+    sec_group_id = response['GroupId']
+    assert sec_group_id.startswith('sg-')
+    # FIXME@viren: Something is wrong with the Shape returned by Moto
+#    assert REGION in response['SecurityGroupArn']
 
-    assert security_group.group_name == sec_name
-    assert security_group.description == "test"
+    response = client.describe_security_groups(GroupIds=[sec_group_id])
+    assert response['SecurityGroups'][0]['GroupName'] == sec_name
+    assert response['SecurityGroups'][0]['Description'] == "test"
 
     # Trying to create another group with the same name should throw an error
     with pytest.raises(ClientError) as ex:
@@ -47,7 +51,7 @@ def test_create_and_describe_security_group():
 
     all_groups = retrieve_all_sgs(client)
     # The default group gets created automatically
-    assert security_group.id in [g["GroupId"] for g in all_groups]
+    assert sec_group_id in [g["GroupId"] for g in all_groups]
     group_names = set([group["GroupName"] for group in all_groups])
     assert "default" in group_names
     assert sec_name in group_names
